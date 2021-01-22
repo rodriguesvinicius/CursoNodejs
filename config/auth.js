@@ -1,5 +1,7 @@
 const localStrategy = require('passport-local').Strategy
 const Usuario = require('../models/Usuario')
+const bcrypt = require('bcryptjs')
+
 module.exports = function (passport) {
     passport.use(new localStrategy({ usernameField: "userEmail", passwordField: "userPassword" }, (email, senha, done) => {
         Usuario.findOne({ where: { emailUsuario: email } }).then((usuario) => {
@@ -7,12 +9,13 @@ module.exports = function (passport) {
                 console.log("Conta não existe")
                 return done(null, false, { message: 'Esta conta não existe' })
             } else {
-                console.log(usuario)
-                if (!(usuario.senhaUsuario == senha)) {
-                    console.log("Senha incorreta")
-                    return done(null, false, { message: 'As senhas não correspodem' })
-                }
-                return done(null, usuario)
+                bcrypt.compare(senha, usuario.senhaUsuario, (erro, batem) => {
+                    if (batem) {
+                        return done(null, usuario)
+                    } else {
+                        return done(null, false, { message: "Senha Incorreta" })
+                    }
+                })
             }
         })
     }))

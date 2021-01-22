@@ -10,6 +10,7 @@ const usuario = require('./Routes/usuario')
 const session = require('express-session')
 const Usuario = require('./models/Usuario'); // aqui estamos importando o modulo responsavel por acessar a tabela Usuario do banco de dados
 const email = require('validator');
+const bcrypt = require('bcryptjs')
 const passport = require('passport');
 require('./config/auth')(passport)
 const { deslogado, logado } = require('./helper/authentication')
@@ -106,21 +107,36 @@ app.post('/register', (req, res) => {
                 // estou redirecionando para a pagian de registro
                 res.redirect('/register')
             } else {
-                Usuario.create({
-                    nomeUsuario: req.body.userName,
-                    emailUsuario: req.body.userEmail,
-                    senhaUsuario: req.body.userPassword,
-                }).then(() => {
-                    // quando cair aqui dentro e porque o usuario foi registrado com sucesso
-                    console.log("Usuario cadastrado com sucesso")
 
-                    req.flash('success_msg', "Usuario cadastrado com sucesso")
-                    // refirecionando para a tela de login
-                    res.redirect('/')
-                }).catch((err) => {
-                    // caso ocorra qualquer tipo de erro o catch ira tratar o erro e apresentar no console
-                    console.log(err)
+                bcrypt.genSalt(10, (erro, salt) => {
+                    bcrypt.hash(req.body.userPassword, salt, (erro, hash) => {
+                        if (erro) {
+                            req.flash("error_msg", "Houve um erro durante o salvamento")
+                            res.redirect('/')
+                        }
+
+                        let senhaCrypt = hash
+
+                        Usuario.create({
+                            nomeUsuario: req.body.userName,
+                            emailUsuario: req.body.userEmail,
+                            senhaUsuario: senhaCrypt,
+                        }).then(() => {
+                            // quando cair aqui dentro e porque o usuario foi registrado com sucesso
+                            console.log("Usuario cadastrado com sucesso")
+
+                            req.flash('success_msg', "Usuario cadastrado com sucesso")
+                            // refirecionando para a tela de login
+                            res.redirect('/')
+                        }).catch((err) => {
+                            // caso ocorra qualquer tipo de erro o catch ira tratar o erro e apresentar no console
+                            console.log(err)
+                            req.flash('error_msg', "Houve um problema")
+                            res.redirect('/')
+                        })
+                    })
                 })
+
             }
         }).catch((err) => {
             // caso ocorra qualquer tipo de erro o catch ira tratar o erro e apresentar no console
